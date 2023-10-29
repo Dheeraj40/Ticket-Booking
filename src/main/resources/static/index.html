@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Ticket Reservation</title>
+	<link rel="stylesheet" href="/webjars/bootstrap/5.3.2/css/bootstrap.min.css" />
+</head>
+
+<body>
+	<div class="container border border-sucess shadow-lg p-3 mb-5 bg-body-tertiary rounded text-center">
+		<h2 class="text-body">Railway Ticket Booking System </h2>
+	</div>
+	<div class="container mx-auto">
+		<div id="choiceFault" class="alert alert-warning" style="display:none" role="alert">
+			Start and End Destinations are same. Kindly choose a correct station
+		</div>
+	</div>
+	<form id="stationForm" class="row p-4 mx-auto g-3 needs-validation" novalidate>
+		<div class="col-md-3">
+			<label for="startStation" class="form-label">Start Station</label>
+			<select class="form-select" id="startStation" required>
+				<option selected disabled value="">Choose...</option>
+			</select>
+			<div class="invalid-feedback">
+				Please select a valid station.
+			</div>
+		</div>
+		<div class="col-md-3">
+			<label for="endStation" class="form-label">End Station</label>
+			<select class="form-select" id="endStation" required>
+				<option selected disabled value="">Choose...</option>
+			</select>
+			<div class="invalid-feedback">
+				Please select a valid station.
+			</div>
+		</div>
+		<div class="col-md-4">
+			<label for="price" class="form-label">Price</label>
+			<input type="text" class="form-control" id="price" value="0" disabled="disabled">
+		</div>
+
+		<div class="col-12">
+			<button class="btn btn-primary" type="submit">Generate Ticket</button>
+		</div>
+	</form>
+	<div id="ticketStatus" class="container shadow-lg bg-body-tertiary rounded text-center" style="display:none">
+	</div>
+
+	<form id="tktredemed" class="row p-4 mx-auto g-3 needs-validation" novalidate>
+		<div class="col-md-4">
+			<label for="ticketId" class="form-label">Ticket ID</label>
+			<input type="number" class="form-control" id="ticketId" value="1" required>
+			<div class="invalid-feedback">
+				Value can't be null'
+			</div>
+		</div>
+
+		<div class="col-12">
+			<button class="btn btn-primary" type="submit">Redeem Ticket</button>
+		</div>
+	</form>
+	<div id="redeemStatus" class="alert p-4" role="alert" style="display:none">
+	</div>
+
+	<script src="webjars/jquery/3.7.1/jquery.min.js"></script>
+	<script src=" webjars/bootstrap/5.3.2/js/bootstrap.min.js"></script>
+	<script th:inline="javascript">
+		$(document).ready(function () {
+			var res = documentReadyAjaxCall();
+			if (!(Object.is(res, null) || Object.is(res, undefined))) {
+				documentFormValidation();
+				createStartAndEndOption(res);
+				priceOnSelect(res.stations);
+				generateTicket();
+				redeemTicket();
+
+			}
+
+
+		});
+
+		function redeemTicket() {
+			$("#tktredemed").submit(function (e) {
+				e.preventDefault()
+				var tktId = Number($('#ticketId').val())
+				$.ajax({
+					type: "POST",
+					url: "/redemTicket",
+					data: `ticketId=${tktId}`,
+					success: function (res) {
+						updateRedemStatus(res)
+					}
+				});
+
+			})
+
+		}
+		
+		function updateRedemStatus(res){
+			if(res.isRedemable){
+				console.log(res)
+				$("#redeemStatus").removeClass("alert-warning").addClass("alert-success").html(res.reedemed).css({"display": "block"})
+			} else{
+				console.log(res)
+				$("#redeemStatus").removeClass("alert-success").addClass("alert-warning").html(res.cause).css({"display": "block"})
+			
+			}
+		}
+
+		function popOutTicket(ticket) {
+
+			if (!(Object.is(ticket, null) || Object.is(ticket, undefined))) {
+				console.log(ticket)
+				$("#ticketStatus").css({"display": "block"})
+					.html(`Hurray!! Ticket Generated. Please find the ticket detail, <br>
+				Ticket Id : ${ticket.ticketId} <br> 
+				Valid Till : ${ticket.validatedTill}`)
+			}
+		}
+
+		function generateTicket() {
+			$("#stationForm").submit(function (e) {
+				e.preventDefault();
+				console.log("Inside submit")
+				var start = $('#startStation').find(":selected").val()
+				var end = $('#endStation').find(":selected").val()
+				var price = Number($('#price').val())
+				var data = {
+					"fromStation": start,
+					"toStation": end,
+					"price": price
+				}
+
+				$.ajax({
+					type: "POST",
+					url: "/generateTicket",
+					data: JSON.stringify(data),
+					dataType: 'json',
+					contentType: "application/json",
+					async: false,
+					success: function (response) {
+						popOutTicket(response);
+					}
+				})
+			})
+		}
+
+		function priceOnSelect(stations) {
+			$("#startStation").change(function () {
+				var endVal = $('#endStation').find(":selected").val()
+
+				setPrice($(this).val(), endVal, stations);
+			});
+
+			$("#endStation").change(function () {
+				var startVal = $('#startStation').find(":selected").val()
+				setPrice(startVal, $(this).val(), stations);
+
+			});
+		}
+
+		function setPrice(startVal, endVal, stations) {
+			if (!isEmpty(startVal) && !isEmpty(endVal)) {
+				console.log(`${startVal}, ${endVal}`)
+				var price = stations[endVal].price - stations[startVal].price
+				$('#price').val(Math.abs(price))
+				if (price === 0) {
+					$("#choiceFault").css({"display": "block"})
+					setTimeout(function () {
+						$("#choiceFault").css({"display": "none"})
+					}, 5000)
+				}
+			}
+		}
+
+		function createStartAndEndOption(res) {
+			Object.entries(res.stations).forEach((entry) => {
+				const [key, value] = entry;
+				addOption("startStation", `${key}`)
+				addOption("endStation", `${key}`)
+			});
+			console.log(res.stations);
+		}
+
+		function addOption(id, val) {
+			$(`#${id}`).append(`<option value="${val}"> 
+                                       ${val} 
+                                  </option>`);
+		}
+
+		function documentFormValidation() {
+			var forms = $('.needs-validation')
+
+			Array.prototype.slice.call(forms)
+				.forEach(function (form) {
+					form.addEventListener('submit', function (event) {
+						if (!form.checkValidity()) {
+							event.preventDefault()
+							event.stopPropagation()
+						}
+
+						form.classList.add('was-validated')
+					}, false)
+				})
+		}
+
+		function documentReadyAjaxCall() {
+			var res;
+			$.ajax({
+				type: "GET",
+				url: "/stationList",
+				contentType: "application/json",
+				async: false,
+				success: function (response) {
+					res = response;
+				}
+			})
+			return res;
+		}
+
+		function isEmpty(str) {
+			return (!str || str.length === 0);
+		}
+	</script>
+
+</body>
+
+</html>
