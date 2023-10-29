@@ -1,13 +1,8 @@
-package com.test.ticketGeneration.response;
+package com.test.ticketGeneration.res;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.util.TimeZone;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +14,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Builder
 @ToString
-public class GeneratedTicketResponse implements Serializable{
+public class CreatedTicketResponse implements Serializable{
 
 	
 	private static final long serialVersionUID = 1864531324354L;

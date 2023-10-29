@@ -1,4 +1,4 @@
-package com.test.ticketGeneration.request;
+package com.test.ticketGeneration.req;
 
 import java.io.Serializable;
 

@@ -12,26 +12,26 @@ import org.springframework.stereotype.Service;
 
 import com.test.ticketGeneration.entities.StationLkp;
 import com.test.ticketGeneration.entities.TicketMetaInfo;
-import com.test.ticketGeneration.enums.RedeemCause;
+import com.test.ticketGeneration.enumeration.RedeemCause;
 import com.test.ticketGeneration.repository.StationLkpRepo;
 import com.test.ticketGeneration.repository.TktMetaInfoRepo;
-import com.test.ticketGeneration.request.BuyTicketRequest;
-import com.test.ticketGeneration.response.GeneratedTicketResponse;
-import com.test.ticketGeneration.response.PriceDto;
-import com.test.ticketGeneration.response.RedemedTicket;
-import com.test.ticketGeneration.response.StationDetail;
+import com.test.ticketGeneration.req.BuyTicketRequest;
+import com.test.ticketGeneration.res.CreatedTicketResponse;
+import com.test.ticketGeneration.res.PriceDto;
+import com.test.ticketGeneration.res.RecoveredTicket;
+import com.test.ticketGeneration.res.StationInformation;
 
 import jakarta.transaction.Transactional;
 
 @Service
-public class TicketService {
+public class ServiceForTicket {
 
 	@Autowired
 	StationLkpRepo stationLkpRepo;
 	@Autowired
 	TktMetaInfoRepo tktMetaInfoRepo;
 
-	public StationDetail getAllStationsDetail() {
+	public StationInformation getAllStationsDetail() {
 		List<StationLkp> stations = stationLkpRepo.findAllByOrderByStationIdAsc();
 
 		Map<String, PriceDto> stationToPriceMap = new HashMap<>();
@@ -41,11 +41,11 @@ public class TicketService {
 					.lastStation(!station.getLastStation() ? null : station.getLastStation()).build();
 			stationToPriceMap.put(station.getStationName(), price);
 		});
-		return StationDetail.builder().stations(stationToPriceMap).build();
+		return StationInformation.builder().stations(stationToPriceMap).build();
 
 	}
 	@Transactional
-	public GeneratedTicketResponse createTicket(BuyTicketRequest tktMetaData) {
+	public CreatedTicketResponse createTicket(BuyTicketRequest tktMetaData) {
 		Date curDate = new Date();
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(curDate);
@@ -59,11 +59,11 @@ public class TicketService {
 				.price(tktMetaData.getPrice()).startStation(stationStart).reedemCount(0).status("A").validatedTo(validUpto).build();
 
 		ticket = tktMetaInfoRepo.save(ticket);
-		return GeneratedTicketResponse.builder().ticketId(ticket.getTktId()).validatedTill(ticket.getValidatedTo()).build();
+		return CreatedTicketResponse.builder().ticketId(ticket.getTktId()).validatedTill(ticket.getValidatedTo()).build();
 
 	}
 	@Transactional
-	public RedemedTicket redeem(Long tktId) {
+	public RecoveredTicket redeem(Long tktId) {
 		TicketMetaInfo metaInfo = tktMetaInfoRepo.findByTktId(tktId).orElse(null);
 		if(Objects.nonNull(metaInfo)) {
 			switch(metaInfo.getStatus()) {
@@ -74,27 +74,27 @@ public class TicketService {
 					metaInfo.setReedemCount(metaInfo.getReedemCount()+1);
 					metaInfo = tktMetaInfoRepo.save(metaInfo);
 					String redeem = "Congratulations!! Ticket ID: "+tktId+" has been redeemed. Happy Journey!! ";
-					return RedemedTicket.builder().isRedemable(true).reedemed(redeem).build();
+					return RecoveredTicket.builder().isRedemable(true).reedemed(redeem).build();
 				} else if (metaInfo.getReedemCount()+1 <= 2) {
 					metaInfo.setStatus("I");
 					metaInfo = tktMetaInfoRepo.save(metaInfo);
-					return RedemedTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TIME_EXCEED.getCause()).build();
+					return RecoveredTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TIME_EXCEED.getCause()).build();
 				} else {
 					metaInfo.setStatus("I");
 					metaInfo = tktMetaInfoRepo.save(metaInfo);
-					return RedemedTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TWICE.getCause()).build();
+					return RecoveredTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TWICE.getCause()).build();
 				}
 			case "I":
 				if(metaInfo.getReedemCount()+1 <= 2) {
-					return RedemedTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TIME_EXCEED.getCause()).build();
+					return RecoveredTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TIME_EXCEED.getCause()).build();
 				} else {
-					return RedemedTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TWICE.getCause()).build();
+					return RecoveredTicket.builder().isRedemable(false).cause(RedeemCause.REDEMED_TWICE.getCause()).build();
 				}
 			default:
 				throw new IllegalStateException("unkown status");
 			}
 		} else {
-			return RedemedTicket.builder().isRedemable(false).cause(RedeemCause.INVALID_ID.getCause()).build();
+			return RecoveredTicket.builder().isRedemable(false).cause(RedeemCause.INVALID_ID.getCause()).build();
 		}
 		
 	}

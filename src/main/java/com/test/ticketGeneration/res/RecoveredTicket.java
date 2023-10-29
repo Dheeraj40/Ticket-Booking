@@ -1,7 +1,6 @@
-package com.test.ticketGeneration.response;
+package com.test.ticketGeneration.res;
 
 import java.io.Serializable;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -12,18 +11,16 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @ToString
-public class PriceDto implements Serializable{
-	
+public class RecoveredTicket implements Serializable{
 
-	private static final long serialVersionUID = 18451205120563L;
+	private static final long serialVersionUID = 1L;
+	Boolean isRedemable;
 	@JsonInclude(Include.NON_NULL)
-	Boolean startStation;
+	String cause;
 	@JsonInclude(Include.NON_NULL)
-	Boolean lastStation;
-	
-	Long price;
+	String reedemed;
 }

@@ -1,4 +1,4 @@
-package com.test.ticketGeneration.enums;
+package com.test.ticketGeneration.enumeration;
 
 import lombok.Getter;
 
